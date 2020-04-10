@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+
+  <title>Žádost OSVČ</title>
+
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+  <script src="https://unpkg.com/vue"></script>
+
+</head>
+
+<body>
+  <div id="app">
+    <div class="container pt-5">
+
+      <div v-if="step === 'eligibility'">
+        <h2 class="text-center">Týká se mě pětadvacítka?</h2>
+
+        <form v-on:submit="submitEligibility">
+          <div class="form-row mt-5">
+            <div class="form-group col-12 col-md-8">
+              <label>Byl jste k 12. březnu 2020 aktivní OSVČ?</label>
+            </div>
+            <div class="form-group col-12 col-md-4">
+              <div class="custom-control custom-radio custom-control-inline">
+                <input v-model="eligibility.active" type="radio" id="eligibilityRadio1" value="1" class="custom-control-input">
+                <label class="custom-control-label" for="eligibilityRadio1">Ano</label>
+              </div>
+              <div class="custom-control custom-radio custom-control-inline">
+                <input v-model="eligibility.active" type="radio" id="eligibilityRadio0" value="0" class="custom-control-input">
+                <label class="custom-control-label" for="eligibilityRadio0">Ne</label>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="eligibility.active === '0'">
+            <div class="form-row mt-5">
+              <div class="form-group col-12 col-md-8">
+                <label>Měl/a jste k 12. březnu 2020 přerušenou činnost OSVČ?</label>
+              </div>
+              <div class="form-group col-12 col-md-4">
+                <div class="custom-control custom-radio custom-control-inline">
+                  <input v-model="eligibility.interrupted" value="1" type="radio" id="interruptedRadio1" class="custom-control-input">
+                  <label class="custom-control-label" for="interruptedRadio1">Ano</label>
+                </div>
+                <div class="custom-control custom-radio custom-control-inline">
+                  <input v-model="eligibility.interrupted" value="0" type="radio" id="interruptedRadio0" class="custom-control-input">
+                  <label class="custom-control-label" for="interruptedRadio0">Ne</label>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="eligibility.interrupted === '1'" class="form-row mt-5">
+              <div class="form-group col-12 col-md-8">
+                <label>Přerušil jste činnost OSVČ 1. 9. 2019 nebo později?</label>
+              </div>
+              <div class="form-group col-12 col-md-4">
+                <div class="custom-control custom-radio custom-control-inline">
+                  <input v-model="eligibility.interruptedDate" value="1" type="radio" id="interruptedDateRadio1" class="custom-control-input">
+                  <label class="custom-control-label" for="interruptedDateRadio1">Ano</label>
+                </div>
+                <div class="custom-control custom-radio custom-control-inline">
+                  <input v-model="eligibility.interruptedDate" value="0" type="radio" id="interruptedDateRadio0" class="custom-control-input">
+                  <label class="custom-control-label" for="interruptedDateRadio0">Ne</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 text-center">
+            <button v-if="checkEligibility(eligibility) === true" type="submit" class="btn btn-success">POKRAČOVAT</button>
+            <a v-if="checkEligibility(eligibility) === false" href="other.html" class="btn btn-danger">NEMÁTE NÁROK, ZOBRAZTE JINÉ MOŽNOSTI KLIKNUTÍM</a>
+          </div>
+        </form>
+      </div>
+
+
+      <div v-if="step === 'calculation'">
+        <h2 class="text-center">Výše kompenzace</h2>
+
+        <form class="mt-5" v-on:submit="submitCalculation">
+          <div class="form-group">
+            <label>Ve kterých dnech jste nemohl/a činnost OSVČ zcela nebo z části vykonávat nad míru obvyklou v důsledku ohrožení zdraví nebo krizových opatření, a to zejména z důvodu</label>
+            <ul style="list-style-type: lower-alpha;">
+              <li>nutnosti uzavřít provozovnu či omezit její provoz,</li>
+              <li>vaší karantény nebo či katantény vašeho zaměstnance,</li>
+              <li>péče o vaše dítě nebo překážky v práci spočívající v péči o dítě v případě vašeho zaměstnance,</li>
+              <li>omezení poptávky po výrobcích, službách nebo jiných výstupech vaší samostatné výdělečné činnosti nebo</li>
+              <li>omezení či ukončení dodávek nebo služeb potřebných pro výkon vaší samostatné výdělečné činnosti?</li>
+            </ul>
+          </div>
+
+          <div class="form-group my-5">
+            <div class="custom-control custom-radio my-3">
+              <input type="radio" v-model="calculation.all" v-bind:value="true" id="calculationDaysRadioAll" class="custom-control-input">
+              <label class="custom-control-label" for="calculationDaysRadioAll">Ve všech dnech od 12. 3. do 30. 4.</label>
+            </div>
+            <div class="custom-control custom-radio my-3">
+              <input type="radio" v-model="calculation.all" v-bind:value="false" id="calculationDaysRadioSome" class="custom-control-input">
+              <label class="custom-control-label" for="calculationDaysRadioSome">Pouze v některých dnech. Vyberte níže.</label>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div v-if="calculation.all === false" class="col-12 offset-md-2 col-md-8 offset-lg-4 col-lg-4">
+              <div style="height:250px;overflow:auto" class="bg-light p-3">
+                <div v-for="(day, index) in days" class="form-group">
+                  <div class="custom-control custom-checkbox">
+                    <input v-model="calculation.days" v-bind:value="day" type="checkbox" class="custom-control-input" v-bind:id="'calculationDays' + index">
+                    <label class="custom-control-label" v-bind:for="'calculationDays' + index">{{day}}</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 text-center">
+            <button v-if="calculation.all === true || calculation.days.length > 0" type="submit" class="btn btn-success">POŽÁDAT O {{ 500 * (calculation.all ? 50 : calculation.days.length)}} Kč</button>
+          </div>
+
+        </form>
+      </div>
+
+
+      <div v-if="step === 'identification'">
+        <h2 class="text-center">Identifikační údaje</h2>
+
+        <form class="mt-5" v-on:submit="submitIdentification">
+
+          <div class="form-row">
+            <div class="form-group col-12">
+              <label for="formNameInput">Jméno a příjmení</label>
+              <input type="text" v-model="info.name" class="form-control" id="formNameInput" aria-describerby="formNameHelp">
+              <small id="formNameHelp" class="form-text text-muted">Vaše jméno a příjmení, tak jak ho máte uvedené v živnostenském listu</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12 col-md-4">
+              <label for="formNameInput">Datum narození</label>
+              <input type="date" v-model="info.birthday" class="form-control" id="formNameInput" aria-describerby="formNameHelp">
+              <small id="formNameHelp" class="form-text text-muted">Vyberte pomocí kalendáře</small>
+            </div>
+            <div class="form-group col-12 col-md-8">
+              <label for="formIcoInput">DIČ</label>
+              <input type="text" v-model="info.dic" class="form-control" id="formIcoInput" aria-describerby="formIcoHelp">
+              <small id="formIcoHelp" class="form-text text-muted">Daňové identifikační číslo. Ve většině případů se jedná o CZ a rodné číslo</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12 col-md-5">
+              <label for="formPhoneInput">Telefon</label>
+              <input type="text" v-model="info.phone" class="form-control" id="formPhoneInput">
+            </div>
+            <div class="form-group col-12 col-md-7">
+              <label for="formIcoInput">E-mail</label>
+              <input type="text" v-model="info.email" class="form-control" id="formIcoInput">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12">
+              <label for="formAddressInput">Adresa místa trvalého pobytu</label>
+              <input type="text" v-model="info.address" class="form-control" id="formAddressInput">
+            </div>
+          </div>
+
+          Finančnímu úřadu... TODO
+
+          <div class="mt-5 text-center">
+            <button type="submit" class="btn btn-success">POTVRZUJI IDENTIFIKAČNÍ ÚDAJE</button>
+          </div>
+
+        </form>
+      </div>
+
+      <div v-if="step === 'bank'">
+        <h2 class="text-center">Bankovní spojení</h2>
+
+        <form class="mt-5" v-on:submit="submitBank">
+
+          <div class="form-row">
+            <div class="form-group col-12 col-md-4">
+              <label for="formPhoneInput">Předčíslí</label>
+              <input type="text" v-model="info.account_prefix" class="form-control" id="formPhoneInput">
+            </div>
+            <div class="form-group col-12 col-md-6">
+              <label for="formPhoneInput">Číslo účtu *</label>
+              <input type="text" v-model="info.account_number" class="form-control" id="formPhoneInput">
+            </div>
+            <div class="form-group col-12 col-md-2">
+              <label for="formIcoInput">Kód banky *</label>
+              <input type="text" v-model="info.account_suffix" class="form-control" id="formIcoInput">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-12">
+              <label for="formPhoneInput">Účet vedený u *</label>
+              <input type="text" v-model="info.account_institution" class="form-control" id="formPhoneInput">
+            </div>
+          </div>
+
+          <div class="mt-5 text-center">
+            <button type="submit" class="btn btn-success">POTVRZUJI PLATEBNÍ ÚDAJE</button>
+          </div>
+        </form>
+      </div>
+
+      <div v-if="step === 'send'">
+        <div class="preview">
+          <h1>Žádost o poskytnutí kompenzačního bonusu</h1>
+          <p>podle návrhu zákona o kompenzačním bonusu v souvislosti s krizovými opatřeními v souvislosti s výskytem koronaviru SARS CoV-2, ve znění senátního tisku č. 227 schváleného Senátem Parlamentu ČR dne 9. 4. 2020 (dále jen „zákon o kompenzačním bonusu“).</p>
+
+          <p>Finančnímu úřadu XXX Územní pracoviště (v/ve/pro)</p>
+          <p>E-mailová adresa pro podání žádosti: podatelna2001@fs.mfcr.cz</p>
+
+          <h2>A. ÚDAJE O DAŇOVÉM SUBJEKTU</h2>
+
+          <div class="row">
+            <div class="col-3">Jméno a příjmení</div>
+            <div class="col-8"><strong>{{info.name}}</strong></div>
+          </div>
+          <div class="row">
+            <div class="col-3">Datum narození</div>
+            <div class="col-3"><strong>{{info.birthday}}</strong></div>
+            <div class="col-2">DIČ:</div>
+            <div class="col-4"><strong>{{info.dic}}</strong></div>
+          </div>
+          <div class="row">
+            <div class="col-3">Kontaktní údaje (telefon/email)</div>
+            <div class="col-8"><strong>{{info.phone}} {{info.email}}</strong></div>
+          </div>
+          <div class="row">
+            <div class="col-3">Adresa místa pobytu</div>
+            <div class="col-8"><strong>{{info.address}}</strong></div>
+          </div>
+          <p>Bankovní spojení (číslo účtu vedeného v české měně, na nějž má být kompenzační bonus vyplacen)</p>
+          <div class="row">
+            <div class="col-3">Účet vedený u</div>
+            <div class="col-8"><strong>{{info.account_institution}}</strong></div>
+          </div>
+          <div class="row">
+            <div class="col-4">č. účtu</div>
+            <div class="col-4"><strong>{{info.account_prefix ? info.account_prefix + '-' : ''}}{{info.account_number}}</strong></div>
+            <div class="col-2">kód banky</div>
+            <div class="col-2"><strong>{{info.account_suffix}}</strong></div>
+          </div>
+
+          <p>Žádám o poskytnutí kompenzačního bonusu ve výši dle § 4 zákona o kompenzačním bonusu.</p>
+
+          <h2>B. POŽADOVANÁ ČÁSTKA</h2>
+          <p v-if="calculation.all" class="text-center"><strong>Plná částka (tj. od 12. 3. do 30. 4. 2020)</strong></p>
+          <p v-else="calculation.all" class="text-center"><strong>Ve dnech {{calculation.days.map(item => item.replace(/.. /,"")).join(", ")}}</strong></p>
+
+          <p class="text-center">Počet dní: <strong>{{(calculation.all ? 50 : calculation.days.length)}}</strong> Částka celkem (v Kč): <strong>{{500 * (calculation.all ? 50 : calculation.days.length)}}</strong></p>
+
+          <h2>C. ČESTNÉ PROHLÁŠENÍ</h2>
+          <p>Dle § 7 odst. 1 písm. a) zákona o kompenzačním bonusu prohlašuji, že splňuji veškeré podmínky zákona o kompenzačním bonusu pro vznik nároku na kompenzační bonus.</p>
+        </div>
+
+        <div class="mt-5 text-center">
+          <button type="submit" class="btn btn-success">ODESLAT POMOCÍ DATOVÉ SCHRÁNKY</button>
+          <br><br>
+          <button type="submit" class="btn btn-success">ODESLAT EMAILEM</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <script>
+
+    var app = new Vue({
+      el: '#app',
+      data: {
+        step: "eligibility",
+
+        eligibility: {
+          active: undefined,
+          interrupted: undefined
+        },
+
+        calculation: {
+          all: undefined,
+          days: []
+        },
+
+        info: {
+          name: undefined,
+          birthday: undefined,
+          dic: undefined,
+          phone: undefined,
+          email: undefined,
+          address: undefined,
+          account_institution: undefined,
+          account_prefix: undefined,
+          acount_number: undefined,
+          account_suffix: undefined
+        },
+
+        days: [
+          "čt 12. 3. 2020",
+          "pá 13. 3. 2020",
+          "so 14. 3. 2020",
+          "ne 15. 3. 2020",
+          "po 16. 3. 2020",
+          "út 17. 3. 2020",
+          "st 18. 3. 2020",
+          "čt 19. 3. 2020",
+          "pá 20. 3. 2020",
+          "so 21. 3. 2020",
+          "ne 22. 3. 2020",
+          "po 23. 3. 2020",
+          "út 24. 3. 2020",
+          "st 25. 3. 2020",
+          "čt 26. 3. 2020",
+          "pá 27. 3. 2020",
+          "so 28. 3. 2020",
+          "ne 29. 3. 2020",
+          "po 30. 3. 2020",
+          "út 31. 3. 2020",
+          "st 1. 4. 2020",
+          "čt 2. 4. 2020",
+          "pá 3. 4. 2020",
+          "so 4. 4. 2020",
+          "ne 5. 4. 2020",
+          "po 6. 4. 2020",
+          "út 7. 4. 2020",
+          "st 8. 4. 2020",
+          "čt 9. 4. 2020",
+          "pá 10. 4. 2020",
+          "so 11. 4. 2020",
+          "ne 12. 4. 2020",
+          "po 13. 4. 2020",
+          "út 14. 4. 2020",
+          "st 15. 4. 2020",
+          "čt 16. 4. 2020",
+          "pá 17. 4. 2020",
+          "so 18. 4. 2020",
+          "ne 19. 4. 2020",
+          "po 20. 4. 2020",
+          "út 21. 4. 2020",
+          "st 22. 4. 2020",
+          "čt 23. 4. 2020",
+          "pá 24. 4. 2020",
+          "so 25. 4. 2020",
+          "ne 26. 4. 2020",
+          "po 27. 4. 2020",
+          "út 28. 4. 2020",
+          "st 30. 4. 2020",
+          "čt 26. 4. 2020",
+          "pá 27. 4. 2020",
+          "so 28. 4. 2020",
+          "ne 29. 4. 2020",
+          "po 30. 4. 2020",
+          "út 31. 4. 2020",
+          "st 1. 4. 2020",
+
+        ]
+      },
+      methods: {
+
+        submitEligibility: function (event) {
+          this.step = 'calculation';
+          event.preventDefault();
+        },
+
+        submitCalculation: function (event) {
+          this.step = 'identification';
+          event.preventDefault();
+        },
+
+        submitIdentification: function (event) {
+          this.step = 'bank';
+          event.preventDefault();
+        },
+
+        submitBank: function (event) {
+          this.step = 'send';
+          event.preventDefault();
+        },
+
+
+
+
+        // helper methods
+
+        checkEligibility: function (eligibility) {
+
+          if (eligibility.active === '1' || (eligibility.interrupted === '1' && eligibility.interruptedDate === '1')) return true;
+          if (eligibility.active === '0' && (eligibility.interrupted === '0' || eligibility.interruptedDate === '0')) return false;
+          return null;
+        },
+
+      }
+    });
+
+
+
+  </script>
+</body>
+
+</html>
